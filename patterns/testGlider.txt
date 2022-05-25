@@ -1,0 +1,6 @@
+!Name: Classic Glider
+!The classic Glider pattern, specified in Plaintext format.
+!
+.O.
+..O
+OOO
