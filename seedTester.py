@@ -27,9 +27,13 @@ class GameOfLife:
 	# FIXME: Alternative rulesets cannot be specified yet
 	def __init__(self, seedFilename, sideLength, gameDuration):
 		# Acquire environment variables
+		self.qtyLive = self.qtyDead = 0
+		# duration, state, initialSeed, starting x/yPos
 		self.duration = gameDuration
+		self.currentTurn = 0
 		# Build an empty game world
 		self.state = np.zeros((sideLength, sideLength), dtype=bool)
+		self.worldSize = sideLength ** 2
 		# Obtain the seed config from the input file
 		self.initialSeed = self.readSeedFile(seedFilename)
 		# Apply the seed to the game world
@@ -41,6 +45,7 @@ class GameOfLife:
 		for yOffset in range(self.initialSeed.shape[1]):
 			for xOffset in range(self.initialSeed.shape[0]):
 				self.state[(xPos + xOffset)][(yPos + yOffset)] = self.initialSeed[xOffset][yOffset]
+		self.stability() # updates qtyLive, qtyDead
 
 	def readSeedFile(self, filename):
 		# Reads in the specified seed, printing any comments it discovers, and
@@ -97,6 +102,7 @@ class GameOfLife:
 		# 1 For each entry in A,
 		# 2 Apply 2d convolution of K with sub-matrix centered on entry_A
 		# 3 Place result of convolution at entry_B
+		# Returns a matrix where each entry is the count of its live neighbors
 		outputMx = np.zeros(np.shape(inputMx), dtype=int)
 		outputMx = scp.convolve2d(inputMx, kernelMx, mode='same', boundary='wrap')
 		return outputMx
@@ -112,6 +118,26 @@ class GameOfLife:
 		outputMx[np.where((inputMx == 2) & (self.state == 0))] = 1
 		return outputMx
 
+	def stability(self):
+		# Counts the number of living tiles in the game world to assess the
+		# stability rating (the ratio between live/dead tiles)
+		# If the stability rating is too low (D >>> L) or too high (D <<< L)
+		# then this will return false
+		# FIXME: set a smarter lower threshold to prevent too-early halting
+		# FIXME: allow defn of ratio bounds for this at CLI
+		continueFlag = True
+		self.qtyLive = np.count_nonzero(self.state)
+		self.qtyDead = self.worldSize - self.qtyLive
+		popRatio = self.qtyLive / self.qtyDead
+		#print(self.qtyLive, "/", self.qtyDead, ":", self.worldSize, "@", popRatio) # DEBUG
+		if popRatio < 0.001 and self.currentTurn > 25: # underpopulated
+			print("\nWorld terminated early due to underpopulation")
+			continueFlag = False
+		if popRatio > 0.99: # overpopulated
+			print("\nWorld terminated early due to overpopulation")
+			continueFlag = False
+		return continueFlag
+
 	def runSimulation(self, display=False):
 		# Runs the GoL simulation process
 		# Defaults to no display for faster processing times
@@ -123,19 +149,23 @@ class GameOfLife:
 		# 2 Apply the specified ruleset to B to produce a new state C
 		# 3 Define C as the new input A for the next iteration
 		template = fullKernel # FIXME: allow runtime selection
-		print("Running simulation...")
+		print("Starting simulation:")
 		for iteration in range(self.duration):
-			print(iteration + 1, "/", self.duration, end='\r')
+			self.currentTurn += 1
+			#print(iteration + 1, "/", self.duration, end='\r')
+			print("Iteration:", self.currentTurn, "/", self.duration, end='\r')
 			sumMatrix = self.calculate(self.state, template)
 			newState = self.applyConwayRuleset(sumMatrix)
-			# Information about the new state should be gathered HERE
+			# Information about the new state should be gathered at this point
 			self.state = newState
-			#self.displaySimpleGrid()
-		print("Done!")
+			# if self.state is outside defns of stability
+			if self.stability() == False:
+				break
+		print("\nSimulation is finished")
 
 	def displayResults(self):
 		# Shows the final results of the simulation
-		print("Final output (debug)")
+		print("Final world state:")
 		self.displaySimpleGrid()
 
 # MAIN
@@ -146,12 +176,13 @@ def main():
 	cmdArgs.add_argument('seedFile', type=str, help="the file that contains the initial seed")
 	cmdArgs.add_argument('-s', '--size', type=int, default=100, help="sets the side length of the world grid")
 	cmdArgs.add_argument('-t', '--time', type=int, default=100, help="sets the maximum number of turns to simulate")
+	# FIXME: add flag to print contents of initial seed at program start?
 	argVals = cmdArgs.parse_args()
 	# Initialize a new game
 	# Open the seed file and read it out into a string object
 	currentWorld = GameOfLife(argVals.seedFile, argVals.size, argVals.time)
 	currentWorld.runSimulation()
-	currentWorld.displayResults()
+	#currentWorld.displayResults()
 
 # The self-invocation method
 if __name__ == "__main__":
