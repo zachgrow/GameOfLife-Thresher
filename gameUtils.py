@@ -16,6 +16,7 @@ class GameOfLife:
 		# Define the internal environment variables
 		self.qtyLive = 0
 		self.qtyDead = 0
+		self.density = 0
 		self.popRatio = 0
 		self.worldSize = sideLength ** 2
 		# Build an empty game world
@@ -109,7 +110,11 @@ class GameOfLife:
 		self.qtyDead = self.worldSize - self.qtyLive
 		if self.qtyDead: self.popRatio = self.qtyLive / self.qtyDead
 		return self.popRatio
-	def calculate(self, kernelMx):
+	def calcDensity(self):
+		# Calculates the density of the game world: liveTiles / totalTiles
+		self.takeCensus()
+		return self.qtyLive / self.worldSize
+	def convolve(self, kernelMx):
 		# Applies convolution to the supplied matrices
 		# 1 For each entry in A,
 		# 2 Apply 2d convolution of K with sub-matrix centered on entry_A

@@ -26,15 +26,17 @@ def checkStability(target, currentTurn):
 	# then this will return false
 	# FIXME: set a smarter lower threshold to prevent too-early halting
 	# FIXME: allow defn of ratio bounds for this at CLI
-	continueFlag = True
-	currentRatio = target.takeCensus()
-	if currentRatio < 0.001 and currentTurn > 25: # underpopulated
+	stability = calcStability(target, currentTurn)
+	if stability < 0.0001 and currentTurn > 10:
 		print("\nWorld terminated early due to underpopulation")
-		continueFlag = False
-	if currentRatio > 0.99: # overpopulated
-		print("\nWorld terminated early due to overpopulation")
-		continueFlag = False
-	return continueFlag
+		return False
+	if stability > 0.9998:
+		print("\nWorld terminated due to overpopulation")
+		return False
+	return True
+
+def calcStability(target, currentTurn):
+	return (target.calcDensity() / currentTurn)
 
 def displayResults(target):
 	# Shows the final results of the simulation
@@ -52,6 +54,7 @@ def main():
 	cmdArgs.add_argument('-s', '--size', type=int, default=100, help="sets the side length of the world grid")
 	cmdArgs.add_argument('-t', '--time', type=int, default=100, help="sets the maximum number of turns to simulate")
 	# FIXME: add flag to print contents of initial seed at program start?
+	print("Initializing environment...")
 	argVals = cmdArgs.parse_args()
 	maxDuration = argVals.time
 	# FIXME: allow selection of other kernel matrices
@@ -59,17 +62,34 @@ def main():
 	# Initialize a new game
 	currentWorld = gameUtils.GameOfLife(argVals.seedFile, argVals.size)
 	# Begin the simulation process
-	print("Starting simulation...")
-	for step in range(maxDuration):
-		print("Iteration: ", step + 1, "/", maxDuration, end='\r')
-		neighborMx = currentWorld.calculate(kernel)
+	convolutions = 0
+	stabilityRates = []
+	stabilityDelta = 0.0001 # FIXME: add this to CLI args
+	previousStability = 0
+	print("Running simulation...")
+	for step in range(1, maxDuration):
+		#print("Iteration: ", step, "/", maxDuration, end='\r') # DEBUG
+		neighborMx = currentWorld.convolve(kernel)
+		convolutions += 1
 		newState = currentWorld.applyConwayRules(neighborMx)
-		# Gather info about new world state HERE if desired
+		# Check the current stability and chart it
+		stabilityRates.append(calcStability(currentWorld, convolutions))
+		# Update to the new world state
 		currentWorld.state = newState
+		# If the world's become unstable, then halt
 		if checkStability(currentWorld, step) == False:
 			break
-	print("\nSimulation has finished")
-	displayResults(currentWorld)
+		# calc the new stability average and check the rate of change
+		if len(stabilityRates) > 10:
+			averageStability = sum(stabilityRates[-10:-1]) / 10
+			if abs(averageStability - previousStability) < stabilityDelta:
+				break
+	print("Simulation has finished")
+	#displayResults(currentWorld)
+	print("Final Results:")
+	print("Stability: ", stabilityRates[-1])
+	print("Density: ", currentWorld.calcDensity(), "(", currentWorld.qtyLive, "/", currentWorld.qtyDead, ")")
+	print("Runtime: ", convolutions, "iterations")
 
 # The self-invocation method
 if __name__ == "__main__":
