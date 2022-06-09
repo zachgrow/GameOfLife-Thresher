@@ -12,7 +12,7 @@ liveChar = 'O'
 deadChar = '.'
 
 class GameOfLife:
-	def __init__(self, seedFilename, sideLength):
+	def __init__(self, seed, sideLength):
 		# Define the internal environment variables
 		self.qtyLive = 0
 		self.qtyDead = 0
@@ -22,7 +22,8 @@ class GameOfLife:
 		# Build an empty game world
 		self.state = np.zeros((sideLength, sideLength), dtype=bool)
 		# Obtain the seed config from the input file
-		self.initialSeed = self.readSeedFile(seedFilename)
+		#self.initialSeed = self.readSeedFile(seedFilename)
+		self.initialSeed = seed
 		# Apply the seed to the game world
 		# The game world's geography wraps around
 		# -> all starting positions are equally viable
@@ -70,17 +71,6 @@ class GameOfLife:
 				else: rowString += deadChar
 			output.append(rowString)
 		return output
-# **********
-	def saveToPlaintext(self, target, filename=''):
-		# Saves the given matrix as a Plaintext file
-		# If a filename is not specified, then will be saved with timestamp
-		for row in target:
-			for entry in row:
-				if entry:
-					print(liveChar, end='')
-				else:
-					print(deadChar, end='')
-			print('\n')
 	def displaySimpleGrid(self):
 		# Primitive method for displaying the game grid, for troubleshooting
 		for row in self.state:
@@ -134,3 +124,4 @@ class GameOfLife:
 		outputMx[np.where((neighborMx == 2) & (self.state == 0))] = 1
 		return outputMx
 
+# EOF
