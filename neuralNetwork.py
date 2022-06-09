@@ -25,6 +25,9 @@ class neuralNetwork:
         self.biasesChange.append(np.zeros(self.worldSize))
         self.momentum = 0.9
         self.learningRate = 0.1
+        self.error = []
+        self.activation = []
+        self.layerOutputs = []
 
     def sigmoid(self, x):
         return 1.0/(1.0 + np.exp(-x)) #np.exp is better than ** cause you can pass it a vector/matrix
@@ -38,23 +41,55 @@ class neuralNetwork:
         inputGameArray = []
         for i in range(self.worldSize):
             inputTile = inputGame[i//sideLen][i%sideLen]
-            inputTile = 1 if inputTile == "O" else 0
+            inputTile = 0.9 if inputTile == "O" else 0.1
             inputGameArray.append(inputTile)
 
-        layerOutputs = []
-        layerOutputs.append(self.sigmoid(inputGameArray@self.weights[0] + self.biases[0]))
-        layerOutputs.append(self.sigmoid(layerOutputs[0]@self.weights[1] + self.biases[1]))
+        self.layerOutputs = []
+        self.layerOutputs.append(self.sigmoid(inputGameArray@self.weights[0] + self.biases[0]))
+        self.layerOutputs.append(self.sigmoid(self.layerOutputs[0]@self.weights[1] + self.biases[1]))
 
         for i in range(self.worldSize):
-            newGame[i//sideLen][i%sideLen] = "O" if layerOutputs[1][i] >= .5 else "."
+            newGame[i//sideLen][i%sideLen] = "O" if self.layerOutputs[1][i] >= .5 else "."
         return newGame
 
-    def updateaWeights(self):
-        pass
+    def updateaWeights(self, inputGame, moreStableGame):
+        sideLen = int(np.sqrt(self.worldSize))
+        inputGameArray = []
+        for i in range(self.worldSize):
+            inputTile = inputGame[i//sideLen][i%sideLen]
+            inputTile = 0.9 if inputTile == "O" else 0.1
+            inputGameArray.append(inputTile)
+
+        moreStableGameArray = []
+        for i in range(self.worldSize):
+            inputTile = moreStableGame[i//sideLen][i%sideLen]
+            inputTile = 0.9 if inputTile == "O" else 0.1
+            moreStableGameArray.append(inputTile)
+
+        self.error = []                    
+        self.activation = self.layerOutputs[1]
+        self.error.append(self.activation * (1.0-self.activation) * (moreStableGameArray-self.activation))
+        self.activation = self.layerOutputs[0]
+        self.error.insert(0, self.activation * (1-self.activation) * (self.error[0]@np.transpose(self.weights[1])))
+
+        errorVec = np.reshape(self.error[0], (1,-1))
+        cur = np.reshape(inputGameArray, (-1,1))
+        self.weightChange[0] = (self.learningRate) * (cur@errorVec) + self.momentum * self.weightChange[0]
+        self.weights[0] += self.weightChange[0]
+        self.biasesChange[0] = (self.learningRate) * (self.error[0]) + self.momentum * self.biasesChange[0]
+        self.biases[0] += self.biasesChange[0]
+
+        errorVec = np.reshape(self.error[1], (1,-1))
+        cur = np.reshape(self.layerOutputs[0], (-1,1))
+        self.weightChange[1] = (self.learningRate) * (cur@errorVec) + self.momentum * self.weightChange[1]
+        self.weights[1] += self.weightChange[1]
+        self.biasesChange[1] = (self.learningRate) * (self.error[1]) + self.momentum * self.biasesChange[1]
+        self.biases[1] += self.biasesChange[1]
+
 
 #Test Main
 n = neuralNetwork(3, 20)
 newGame = [["O","O","."],[".",".","O"],["O",".","."]]
-for i in range(3):
+for i in range(5):
     newGame = n.applyWeights(newGame)
-    n.updateaWeights()
+    n.updateaWeights(newGame, [[".",".","."], ["O","O","O"], [".",".","."]])
