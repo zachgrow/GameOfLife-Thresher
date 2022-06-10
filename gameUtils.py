@@ -11,6 +11,57 @@ import scipy.signal as scp
 liveChar = 'O'
 deadChar = '.'
 
+def readSeedFile(filename):
+	# Reads in the specified seed, printing any comments it discovers, and
+	# then creates and returns a matching Numpy array
+	seedLineIndex = 0
+	seedVals = []
+	with open(filename) as target:
+		for line in target:
+			# if the line starts with !, print it
+			if (line.startswith('!')):
+				print(line[1:], end='')
+			# Otherwise, if it's got the right starting val, read it
+			elif (line.startswith('.')) or (line.startswith('O')):
+				seedVals.append(parsePlaintextLine(line))
+			# Elsewise, there was an error
+			else:
+				print("! An invalid value was encountered while reading the seed file:", line.start())
+				return 0
+	# Use the seedVals to build the seedMx: list length, entry length
+	mxWidth = len(seedVals[0])
+	mxHeight = len(seedVals)
+	mxSize = (mxWidth, mxHeight)
+	seedMx = np.zeros(mxSize, dtype=bool)
+	#for line in seedVals:
+	for row in range(mxHeight):
+		for col in range(mxWidth):
+			seedMx[row][col] = seedVals[row][col]
+	return seedMx
+def mxToStringList(target):
+	# Returns a string-list representation of a given matrix
+	output = []
+	for row in target:
+		rowString = ''
+		for entry in row:
+			if entry: rowString += liveChar
+			else: rowString += deadChar
+		output.append(rowString)
+	return output
+def parsePlaintextLine(seedLine):
+	# Reads in a string of . and O and returns an array of 0/1s
+	seedValues = np.zeros(len(seedLine) - 1)
+	target = 0
+	for index in range(len(seedLine) - 1):
+		if seedLine[index] == '.':
+			seedValues[index] = 0
+		elif seedLine[index] == 'O':
+			seedValues[index] = 1
+		else:
+			print("ERROR: Discarding invalid char:", seedValues[index])
+			pass
+	return seedValues
+
 class GameOfLife:
 	def __init__(self, seed, sideLength):
 		# Define the internal environment variables
@@ -34,43 +85,6 @@ class GameOfLife:
 			for xOffset in range(self.initialSeed.shape[0]):
 				self.state[(xPos + xOffset)][(yPos + yOffset)] = self.initialSeed[xOffset][yOffset]
 		self.takeCensus() # updates qtyLive, qtyDead, popRatio with init vals
-	def readSeedFile(self, filename):
-		# Reads in the specified seed, printing any comments it discovers, and
-		# then creates and returns a matching Numpy array
-		seedLineIndex = 0
-		seedVals = []
-		with open(filename) as target:
-			for line in target:
-				# if the line starts with !, print it
-				if (line.startswith('!')):
-					print(line[1:], end='')
-				# Otherwise, if it's got the right starting val, read it
-				elif (line.startswith('.')) or (line.startswith('O')):
-					seedVals.append(self.parsePlaintextLine(line))
-				# Elsewise, there was an error
-				else:
-					print("! An invalid value was encountered while reading the seed file:", line.start())
-					return 0
-		# Use the seedVals to build the seedMx: list length, entry length
-		mxWidth = len(seedVals[0])
-		mxHeight = len(seedVals)
-		mxSize = (mxWidth, mxHeight)
-		seedMx = np.zeros(mxSize, dtype=bool)
-		#for line in seedVals:
-		for row in range(mxHeight):
-			for col in range(mxWidth):
-				seedMx[row][col] = seedVals[row][col]
-		return seedMx
-	def mxToStringList(self, target):
-		# Returns a string-list representation of a given matrix
-		output = []
-		for row in target:
-			rowString = ''
-			for entry in row:
-				if entry: rowString += liveChar
-				else: rowString += deadChar
-			output.append(rowString)
-		return output
 	def displaySimpleGrid(self):
 		# Primitive method for displaying the game grid, for troubleshooting
 		for row in self.state:
@@ -78,20 +92,6 @@ class GameOfLife:
 				if entry == True: print(liveChar, end='')
 				else: print(deadChar, end='')
 			print('\n', end='')
-# *********
-	def parsePlaintextLine(self, seedLine):
-		# Reads in a string of . and O and returns an array of 0/1s
-		seedValues = np.zeros(len(seedLine) - 1)
-		target = 0
-		for index in range(len(seedLine) - 1):
-			if seedLine[index] == '.':
-				seedValues[index] = 0
-			elif seedLine[index] == 'O':
-				seedValues[index] = 1
-			else:
-				print("ERROR: Discarding invalid char:", seedValues[index])
-				pass
-		return seedValues
 	def takeCensus(self):
 		# Counts the number of live tiles in the game world and updates the
 		# population counts of both live and dead tiles

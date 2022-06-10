@@ -12,12 +12,11 @@ import argparse
 import math
 import random as rng
 import numpy as np
-#import geneticAlg as galgo
 import seedTester as st
 
 # FIXME: hardcoded values are here for debugging purposes
-geneSize = 16
 seedWidth = 4
+geneSize = seedWidth ** 2
 mutationRate = 100
 fileFlag = False # set this to True to write output seeds to files
 
@@ -119,7 +118,7 @@ def saveToPlaintext(target, width, filename=''):
 	datestamp = time.strftime("%Y%m%d")
 	timestamp = time.strftime("%H%M%S")
 	if filename == '':
-		filename = datestamp + '-' + timestamp + '_' + 'seed-' + seedhash[:8] + '.txt'
+		filename = datestamp + '-' + timestamp + '_' + 'Gseed-' + seedhash[:8] + '.txt'
 	#print(filename)
 	newFile = open("outputs/" + filename, "w")
 	newFile.write("! seed: " + seedhash + '\n')
@@ -233,9 +232,8 @@ def main():
 	# *** GENERATIONAL LOOP END
 	# Sort one final time so as to place the most fit specimens at the top
 	population.sort(reverse = True, key = lambda x: x[1])
-	bestSeed = population[0]
 	# Display the results for the top three contenders
-	print("RESULTS:")
+	print("Genetic Algorithm RESULTS:")
 	for index in range(3):
 		if population[index] == population[index + 1]: index += 1 # uniques only
 		print("Stability:", population[index][1][0], ", Sim duration:", population[index][1][1])
